@@ -1,0 +1,155 @@
+# WhatsApp AI Platform — Backend Engine
+### Claude-powered WhatsApp automation for Indian small businesses
+
+---
+
+## What this does
+
+Every time a customer sends a WhatsApp message to a registered business:
+
+1. Twilio receives the message and hits your webhook
+2. Your server identifies which business it belongs to
+3. Claude reads the business's data + full chat history
+4. Claude generates an intelligent, contextual reply
+5. Reply is sent back to the customer automatically
+6. Everything is saved to the database for the dashboard
+
+---
+
+## File Structure
+
+```
+backend/
+├── main.py              # FastAPI app + all REST APIs for dashboard
+├── webhook.py           # WhatsApp message receiver + processing pipeline
+├── claude_handler.py    # Claude AI integration (the brain)
+├── database.py          # PostgreSQL models (Business, Contact, Message, Session)
+├── requirements.txt     # Python dependencies
+└── .env.example         # Copy this to .env and fill in your keys
+```
+
+---
+
+## Setup Instructions
+
+### Step 1 — Clone and install dependencies
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+### Step 2 — Set up environment variables
+```bash
+cp .env.example .env
+# Now open .env and fill in all values
+```
+
+### Step 3 — Set up database
+For development, SQLite is used automatically (no setup needed).
+For production, create a PostgreSQL database and update DATABASE_URL in .env.
+
+### Step 4 — Run the server
+```bash
+uvicorn main:app --reload --port 8000
+```
+
+Server runs at: http://localhost:8000
+API docs at:    http://localhost:8000/docs   ← Swagger UI, very useful!
+
+### Step 5 — Expose to internet (for Twilio webhook)
+Twilio needs to reach your server. Use ngrok for development:
+```bash
+# Install ngrok from ngrok.com, then:
+ngrok http 8000
+# You'll get a URL like: https://abc123.ngrok.io
+```
+
+### Step 6 — Configure Twilio
+1. Go to https://console.twilio.com
+2. WhatsApp → Sandbox Settings
+3. Set webhook URL to: https://abc123.ngrok.io/webhook/whatsapp
+4. Method: POST
+5. Save
+
+### Step 7 — Register your first business
+```bash
+curl -X POST http://localhost:8000/api/businesses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Ravi Tiles Hyderabad",
+    "whatsapp_number": "+919876543210",
+    "business_type": "tiles",
+    "owner_name": "Ravi",
+    "owner_phone": "+919876543211",
+    "bot_config": {
+      "business_description": "We sell floor tiles, wall tiles, bathroom fittings and outdoor tiles in Hyderabad. We have been in business for 10 years.",
+      "services": ["Floor tiles", "Wall tiles", "Bathroom fittings", "Outdoor tiles"],
+      "price_range": "₹28 to ₹150 per square foot depending on type and quality",
+      "working_hours": "Monday to Saturday, 9am to 7pm",
+      "location": "Kukatpally, Hyderabad",
+      "delivery": "We deliver across Hyderabad within 3 to 5 working days",
+      "faqs": [
+        {"q": "Do you give samples?", "a": "Yes, free samples available for orders above 100 sqft"},
+        {"q": "What is minimum order?", "a": "Minimum order is 50 square feet"},
+        {"q": "Do you install tiles?", "a": "Yes, we provide installation service at extra cost"}
+      ],
+      "escalation_keywords": ["complaint", "refund", "damage", "wrong tiles", "speak to owner"],
+      "language_preference": "auto"
+    }
+  }'
+```
+
+Now send a WhatsApp message to your Twilio sandbox number — Claude will reply!
+
+---
+
+## API Reference
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /webhook/whatsapp | Twilio webhook (auto-called) |
+| POST | /api/businesses | Register new business |
+| GET | /api/businesses/{id} | Get business profile |
+| PUT | /api/businesses/{id}/config | Update bot config |
+| GET | /api/businesses/{id}/conversations | All contacts + last message |
+| GET | /api/businesses/{id}/contacts/{cid}/messages | Full chat history |
+| GET | /api/businesses/{id}/analytics | Key metrics |
+| POST | /api/ai/generate-faqs | Auto-generate FAQs (Claude) |
+| POST | /api/ai/draft-broadcast | Draft broadcast message (Claude) |
+| POST | /webhook/resume-bot/{bid}/{phone} | Resume bot after human handoff |
+
+Full interactive docs: http://localhost:8000/docs
+
+---
+
+## What Claude does in this platform
+
+| Feature | How Claude is used |
+|---------|-------------------|
+| Customer chat replies | Reads business data + history, replies intelligently |
+| Language detection | Auto-replies in Telugu, Hindi, or English |
+| Escalation detection | Identifies frustrated customers, alerts owner |
+| FAQ generation | Generates 8 FAQs from a business description |
+| Broadcast drafting | Writes WhatsApp campaigns from a goal |
+
+---
+
+## Pricing your service
+
+| Your plan | Claude API cost | Twilio cost | Your profit |
+|-----------|----------------|-------------|-------------|
+| Starter ₹999/mo | ~₹80–150 | ~₹100–200 | ~₹650–820 |
+| Growth ₹1,999/mo | ~₹150–300 | ~₹200–400 | ~₹1,300–1,650 |
+| Pro ₹2,999/mo | ~₹300–500 | ~₹300–500 | ~₹2,000–2,400 |
+
+5 Growth clients = ₹10,000/month profit. That's your target.
+
+---
+
+## Next steps
+
+1. ✅ Backend engine (this file) — DONE
+2. ⬜ React dashboard — Inbox, Contacts, Analytics, Settings
+3. ⬜ Multi-tenant auth (JWT login per business)
+4. ⬜ Razorpay subscription billing
+5. ⬜ Self-serve onboarding flow
